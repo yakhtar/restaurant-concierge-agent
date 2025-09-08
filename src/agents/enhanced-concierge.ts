@@ -152,6 +152,35 @@ export class EnhancedConciergeAgent {
       });
     });
 
+    // API endpoint for n8n chat integration
+    this.app.post('/api/chat', async (req, res) => {
+      try {
+        const { message, phone } = req.body;
+        
+        if (!message) {
+          return res.status(400).json({
+            success: false,
+            error: 'Message is required',
+          });
+        }
+
+        const response = await this.processMessage(message.toLowerCase(), phone || 'n8n-test');
+        
+        res.json({
+          success: true,
+          message: response,
+          originalMessage: message,
+          phone: phone,
+        });
+      } catch (error) {
+        console.error('Error processing chat message:', error);
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error',
+        });
+      }
+    });
+
     // API endpoint for reservations (mock)
     this.app.post('/api/reservations/book', (req, res) => {
       const { restaurantName, date, time, partySize, customerName } = req.body;
