@@ -1,0 +1,337 @@
+{
+  "name": "Restaurant Search Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "restaurant-search",
+        "options": {}
+      },
+      "id": "search-webhook",
+      "name": "Search Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate search parameters\nconst requestBody = $input.all()[0].json.body;\n\nconst searchParams = {\n  location: requestBody.location || '',\n  cuisine: requestBody.cuisine || '',\n  radius: requestBody.radius || 5000,\n  priceLevel: requestBody.priceLevel || null,\n  partySize: requestBody.partySize || 2,\n  date: requestBody.date || null,\n  time: requestBody.time || null,\n  dietaryRestrictions: requestBody.dietaryRestrictions || [],\n  allergies: requestBody.allergies || [],\n  userId: requestBody.userId || 'anonymous',\n  openNow: requestBody.openNow || false,\n  minRating: requestBody.minRating || 3.5\n};\n\n// Validate required fields\nif (!searchParams.location) {\n  throw new Error('Location is required for restaurant search');\n}\n\nreturn [{ json: { searchParams, requestId: Date.now().toString() } }];"
+      },
+      "id": "validate-search-params",
+      "name": "Validate Search Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/mcp/google-places/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "location",
+              "value": "={{ $json.searchParams.location }}"
+            },
+            {
+              "name": "radius",
+              "value": "={{ $json.searchParams.radius }}"
+            },
+            {
+              "name": "cuisine",
+              "value": "={{ $json.searchParams.cuisine }}"
+            },
+            {
+              "name": "priceLevel",
+              "value": "={{ $json.searchParams.priceLevel }}"
+            },
+            {
+              "name": "openNow",
+              "value": "={{ $json.searchParams.openNow }}"
+            },
+            {
+              "name": "minRating",
+              "value": "={{ $json.searchParams.minRating }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "google-places-search",
+      "name": "Google Places Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-api-auth",
+          "name": "MCP API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Google Places results and apply dietary filtering\nconst searchResults = $input.all()[0].json;\nconst searchParams = $('Validate Search Parameters').item.json.searchParams;\n\nif (!searchResults.restaurants || searchResults.restaurants.length === 0) {\n  return [{ json: { \n    success: true,\n    restaurants: [],\n    message: 'No restaurants found matching your criteria',\n    searchParams\n  }}];\n}\n\nlet restaurants = searchResults.restaurants;\n\n// Apply dietary restrictions filtering if specified\nif (searchParams.dietaryRestrictions.length > 0 || searchParams.allergies.length > 0) {\n  restaurants = restaurants.map(restaurant => {\n    // Calculate dietary compatibility score\n    let compatibilityScore = 100;\n    const warnings = [];\n    const recommendations = [];\n    \n    // Simple dietary compatibility logic\n    // In a real implementation, this would use the DietaryRestrictionsHandler\n    searchParams.dietaryRestrictions.forEach(restriction => {\n      const hasOption = restaurant.dietaryOptions?.some(opt => \n        opt.type === restriction && opt.available\n      );\n      \n      if (!hasOption) {\n        compatibilityScore -= 20;\n        warnings.push(`Limited ${restriction} options may be available`);\n      } else {\n        recommendations.push(`${restriction} options available`);\n      }\n    });\n    \n    // Check cuisine compatibility with dietary restrictions\n    if (searchParams.dietaryRestrictions.includes('vegetarian')) {\n      const vegFriendlyCuisines = ['indian', 'mediterranean', 'italian'];\n      if (restaurant.cuisine.some(c => vegFriendlyCuisines.includes(c.toLowerCase()))) {\n        compatibilityScore += 10;\n        recommendations.push('Cuisine is vegetarian-friendly');\n      }\n    }\n    \n    return {\n      ...restaurant,\n      dietaryCompatibility: {\n        score: Math.max(0, compatibilityScore),\n        warnings,\n        recommendations\n      }\n    };\n  })\n  .filter(restaurant => restaurant.dietaryCompatibility.score >= 60)\n  .sort((a, b) => b.dietaryCompatibility.score - a.dietaryCompatibility.score);\n}\n\n// Sort by rating if no dietary filtering was applied\nif (searchParams.dietaryRestrictions.length === 0) {\n  restaurants = restaurants.sort((a, b) => b.rating - a.rating);\n}\n\n// Limit results\nrestaurants = restaurants.slice(0, 20);\n\nreturn [{ json: {\n  success: true,\n  restaurants,\n  totalResults: restaurants.length,\n  searchParams,\n  requestId: $('Validate Search Parameters').item.json.requestId\n}}];"
+      },
+      "id": "process-results",
+      "name": "Process & Filter Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-availability-check",
+              "leftValue": "={{ $json.searchParams.date && $json.searchParams.time }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-availability-needed",
+      "name": "Check Availability Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check availability for top restaurants if date/time specified\nconst results = $input.all()[0].json;\nconst restaurants = results.restaurants.slice(0, 5); // Check top 5 only\n\nconst availabilityPromises = restaurants.map(async restaurant => {\n  try {\n    // This would call OpenTable MCP server for availability\n    // For now, simulate availability check\n    const hasAvailability = Math.random() > 0.3; // 70% chance of availability\n    \n    return {\n      ...restaurant,\n      availability: {\n        available: hasAvailability,\n        timeSlots: hasAvailability ? [\n          { time: results.searchParams.time, duration: 120 },\n          { time: addMinutes(results.searchParams.time, 30), duration: 120 },\n          { time: addMinutes(results.searchParams.time, -30), duration: 120 }\n        ].filter(slot => Math.random() > 0.4) : []\n      }\n    };\n  } catch (error) {\n    return {\n      ...restaurant,\n      availability: {\n        available: null,\n        error: 'Could not check availability'\n      }\n    };\n  }\n});\n\nfunction addMinutes(timeStr, minutes) {\n  const [hours, mins] = timeStr.split(':').map(Number);\n  const totalMins = hours * 60 + mins + minutes;\n  const newHours = Math.floor(totalMins / 60) % 24;\n  const newMins = totalMins % 60;\n  return `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;\n}\n\n// Execute promises (simplified for n8n)\nconst restaurantsWithAvailability = restaurants.map(restaurant => ({\n  ...restaurant,\n  availability: {\n    available: Math.random() > 0.3,\n    timeSlots: Math.random() > 0.3 ? [\n      { time: results.searchParams.time, duration: 120 }\n    ] : []\n  }\n}));\n\nreturn [{ json: {\n  ...results,\n  restaurants: [\n    ...restaurantsWithAvailability,\n    ...results.restaurants.slice(5)\n  ]\n}}];"
+      },
+      "id": "check-availability",
+      "name": "Check Restaurant Availability",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/api/customer-preferences/update-search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userId",
+              "value": "={{ $json.searchParams.userId }}"
+            },
+            {
+              "name": "searchQuery",
+              "value": "={{ $json.searchParams }}"
+            },
+            {
+              "name": "resultCount",
+              "value": "={{ $json.totalResults }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "update-search-history",
+      "name": "Update Search History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-api-auth",
+          "name": "MCP API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "return-results",
+      "name": "Return Search Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": false,\n  \"error\": \"{{ $json.error?.message || 'Unknown error occurred' }}\",\n  \"requestId\": \"{{ $('Validate Search Parameters').item.json.requestId }}\"\n}",
+        "responseCode": 500
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "resource": "log",
+        "operation": "write",
+        "level": "error",
+        "message": "Restaurant search error: {{ $json.error?.message }}",
+        "additionalFields": {
+          "metadata": {
+            "requestId": "={{ $('Validate Search Parameters').item.json.requestId }}",
+            "searchParams": "={{ $('Validate Search Parameters').item.json.searchParams }}"
+          }
+        }
+      },
+      "id": "log-error",
+      "name": "Log Search Error",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [900, 500]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Search Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Search Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Search Parameters": {
+      "main": [
+        [
+          {
+            "node": "Google Places Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Places Search": {
+      "main": [
+        [
+          {
+            "node": "Process & Filter Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process & Filter Results": {
+      "main": [
+        [
+          {
+            "node": "Check Availability Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability Needed?": {
+      "main": [
+        [
+          {
+            "node": "Check Restaurant Availability",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Search History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Restaurant Availability": {
+      "main": [
+        [
+          {
+            "node": "Update Search History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Search History": {
+      "main": [
+        [
+          {
+            "node": "Return Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "restaurant-concierge-n8n"
+  },
+  "id": "restaurant-search-orchestrator",
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "restaurant",
+      "name": "Restaurant"
+    },
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "search",
+      "name": "Search"
+    }
+  ]
+}

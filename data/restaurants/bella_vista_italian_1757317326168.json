@@ -1,0 +1,183 @@
+{
+  "restaurant": {
+    "id": "generated_1757317326142_g6c238eyz",
+    "name": "Bella Vista Italian",
+    "address": "789 Oak Street, Chicago, IL",
+    "location": {
+      "lat": 43.325189,
+      "lng": -52.328679
+    },
+    "rating": 4,
+    "priceLevel": 2,
+    "cuisine": [
+      "italian"
+    ],
+    "photos": [],
+    "openingHours": {
+      "periods": [
+        {
+          "open": {
+            "day": 1,
+            "time": "1100"
+          },
+          "close": {
+            "day": 1,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 2,
+            "time": "1100"
+          },
+          "close": {
+            "day": 2,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 3,
+            "time": "1100"
+          },
+          "close": {
+            "day": 3,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 4,
+            "time": "1100"
+          },
+          "close": {
+            "day": 4,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 5,
+            "time": "1100"
+          },
+          "close": {
+            "day": 5,
+            "time": "2300"
+          }
+        },
+        {
+          "open": {
+            "day": 6,
+            "time": "1100"
+          },
+          "close": {
+            "day": 6,
+            "time": "2300"
+          }
+        },
+        {
+          "open": {
+            "day": 0,
+            "time": "1100"
+          },
+          "close": {
+            "day": 0,
+            "time": "2200"
+          }
+        }
+      ],
+      "weekdayText": [
+        "Monday: 11:00 AM – 10:00 PM",
+        "Tuesday: 11:00 AM – 10:00 PM",
+        "Wednesday: 11:00 AM – 10:00 PM",
+        "Thursday: 11:00 AM – 10:00 PM",
+        "Friday: 11:00 AM – 11:00 PM",
+        "Saturday: 11:00 AM – 11:00 PM",
+        "Sunday: 11:00 AM – 10:00 PM"
+      ]
+    },
+    "reviews": [
+      {
+        "author": "Sarah M.",
+        "rating": 3.9393336516556463,
+        "text": "Great experience at Bella Vista Italian! The italian food was delicious and the service was friendly. Will definitely be back.",
+        "time": 1756093804321.6355
+      },
+      {
+        "author": "Mike R.",
+        "rating": 3.685973537624005,
+        "text": "Good italian restaurant. Food was tasty though service was a bit slow. Nice atmosphere overall.",
+        "time": 1754527575660.8477
+      }
+    ],
+    "dietaryOptions": [
+      {
+        "type": "vegetarian",
+        "available": true,
+        "notes": "Multiple vegetarian options available"
+      },
+      {
+        "type": "vegan",
+        "available": false
+      },
+      {
+        "type": "gluten-free",
+        "available": false
+      },
+      {
+        "type": "dairy-free",
+        "available": false
+      },
+      {
+        "type": "nut-free",
+        "available": true,
+        "notes": "Can accommodate nut allergies with notice"
+      },
+      {
+        "type": "shellfish-free",
+        "available": true,
+        "notes": "No shellfish in most dishes"
+      },
+      {
+        "type": "halal",
+        "available": false
+      },
+      {
+        "type": "kosher",
+        "available": false
+      },
+      {
+        "type": "keto",
+        "available": false
+      },
+      {
+        "type": "paleo",
+        "available": false
+      },
+      {
+        "type": "low-carb",
+        "available": false
+      },
+      {
+        "type": "diabetic-friendly",
+        "available": true,
+        "notes": "Several lighter options available"
+      }
+    ]
+  },
+  "generatedFields": [
+    "rating",
+    "priceLevel",
+    "cuisine",
+    "openingHours",
+    "reviews",
+    "dietaryOptions",
+    "menuCategories",
+    "ambiance",
+    "specialFeatures",
+    "popularDishes",
+    "reservationPolicy",
+    "parkingInfo"
+  ],
+  "confidence": 85
+}

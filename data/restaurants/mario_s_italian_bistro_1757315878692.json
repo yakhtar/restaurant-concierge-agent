@@ -1,0 +1,183 @@
+{
+  "restaurant": {
+    "id": "generated_1757315878669_c1xfogob4",
+    "name": "Mario's Italian Bistro",
+    "address": "123 Main Street, New York, NY 10001",
+    "location": {
+      "lat": 36.432042,
+      "lng": -64.552464
+    },
+    "rating": 3.6,
+    "priceLevel": 2,
+    "cuisine": [
+      "italian"
+    ],
+    "photos": [],
+    "openingHours": {
+      "periods": [
+        {
+          "open": {
+            "day": 1,
+            "time": "1100"
+          },
+          "close": {
+            "day": 1,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 2,
+            "time": "1100"
+          },
+          "close": {
+            "day": 2,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 3,
+            "time": "1100"
+          },
+          "close": {
+            "day": 3,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 4,
+            "time": "1100"
+          },
+          "close": {
+            "day": 4,
+            "time": "2200"
+          }
+        },
+        {
+          "open": {
+            "day": 5,
+            "time": "1100"
+          },
+          "close": {
+            "day": 5,
+            "time": "2300"
+          }
+        },
+        {
+          "open": {
+            "day": 6,
+            "time": "1100"
+          },
+          "close": {
+            "day": 6,
+            "time": "2300"
+          }
+        },
+        {
+          "open": {
+            "day": 0,
+            "time": "1100"
+          },
+          "close": {
+            "day": 0,
+            "time": "2200"
+          }
+        }
+      ],
+      "weekdayText": [
+        "Monday: 11:00 AM – 10:00 PM",
+        "Tuesday: 11:00 AM – 10:00 PM",
+        "Wednesday: 11:00 AM – 10:00 PM",
+        "Thursday: 11:00 AM – 10:00 PM",
+        "Friday: 11:00 AM – 11:00 PM",
+        "Saturday: 11:00 AM – 11:00 PM",
+        "Sunday: 11:00 AM – 10:00 PM"
+      ]
+    },
+    "reviews": [
+      {
+        "author": "Sarah M.",
+        "rating": 4.117108330550973,
+        "text": "Great experience at Mario's Italian Bistro! The italian food was delicious and the service was friendly. Will definitely be back.",
+        "time": 1757051258513.3945
+      },
+      {
+        "author": "Mike R.",
+        "rating": 3.608108843842972,
+        "text": "Good italian restaurant. Food was tasty though service was a bit slow. Nice atmosphere overall.",
+        "time": 1755369882298.7334
+      }
+    ],
+    "dietaryOptions": [
+      {
+        "type": "vegetarian",
+        "available": true,
+        "notes": "Multiple vegetarian options available"
+      },
+      {
+        "type": "vegan",
+        "available": false
+      },
+      {
+        "type": "gluten-free",
+        "available": false
+      },
+      {
+        "type": "dairy-free",
+        "available": false
+      },
+      {
+        "type": "nut-free",
+        "available": true,
+        "notes": "Can accommodate nut allergies with notice"
+      },
+      {
+        "type": "shellfish-free",
+        "available": true,
+        "notes": "No shellfish in most dishes"
+      },
+      {
+        "type": "halal",
+        "available": false
+      },
+      {
+        "type": "kosher",
+        "available": false
+      },
+      {
+        "type": "keto",
+        "available": false
+      },
+      {
+        "type": "paleo",
+        "available": false
+      },
+      {
+        "type": "low-carb",
+        "available": false
+      },
+      {
+        "type": "diabetic-friendly",
+        "available": true,
+        "notes": "Several lighter options available"
+      }
+    ]
+  },
+  "generatedFields": [
+    "rating",
+    "priceLevel",
+    "cuisine",
+    "openingHours",
+    "reviews",
+    "dietaryOptions",
+    "menuCategories",
+    "ambiance",
+    "specialFeatures",
+    "popularDishes",
+    "reservationPolicy",
+    "parkingInfo"
+  ],
+  "confidence": 85
+}

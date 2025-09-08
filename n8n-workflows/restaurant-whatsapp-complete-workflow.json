@@ -1,0 +1,336 @@
+{
+  "name": "Restaurant WhatsApp Concierge Complete",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-restaurant-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6",
+      "name": "WhatsApp Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "restaurant-whatsapp-trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "message-text-exists",
+              "leftValue": "={{ $json.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            },
+            {
+              "id": "is-text-message",
+              "leftValue": "={{ $json.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2b3c4d5e-6f7g-8h9i-0j1k-l2m3n4o5p6q7",
+      "name": "Check Valid WhatsApp Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and process WhatsApp message data\nconst webhookData = $input.first().json;\nconst entry = webhookData.entry?.[0];\nconst messageData = entry?.changes?.[0]?.value?.messages?.[0];\nconst contactData = entry?.changes?.[0]?.value?.contacts?.[0];\n\nif (!messageData) {\n  return [{ json: { error: 'No message data found' } }];\n}\n\n// Extract message details\nconst messageText = messageData.text?.body || '';\nconst fromNumber = messageData.from;\nconst messageId = messageData.id;\nconst timestamp = messageData.timestamp;\nconst messageType = messageData.type;\n\n// Extract contact info if available\nconst customerName = contactData?.profile?.name || 'Customer';\n\n// Clean and analyze message\nconst cleanMessage = messageText.toLowerCase().trim();\n\n// Determine message intent\nlet intent = 'general';\nif (cleanMessage.includes('find') || cleanMessage.includes('search') || cleanMessage.includes('show')) {\n  intent = 'search';\n} else if (cleanMessage.includes('book') || cleanMessage.includes('reserve') || cleanMessage.includes('table')) {\n  intent = 'booking';\n} else if (cleanMessage.includes('help') || cleanMessage.includes('menu') || cleanMessage.includes('what')) {\n  intent = 'help';\n} else if (cleanMessage.includes('italian') || cleanMessage.includes('chinese') || cleanMessage.includes('japanese') || cleanMessage.includes('sushi')) {\n  intent = 'cuisine_search';\n}\n\n// Detect cuisine preferences\nconst cuisines = [];\nif (cleanMessage.includes('italian')) cuisines.push('italian');\nif (cleanMessage.includes('chinese')) cuisines.push('chinese');\nif (cleanMessage.includes('japanese') || cleanMessage.includes('sushi')) cuisines.push('japanese');\nif (cleanMessage.includes('mexican')) cuisines.push('mexican');\nif (cleanMessage.includes('indian')) cuisines.push('indian');\n\n// Create formatted request for restaurant agent\nconst restaurantRequest = {\n  entry: [{\n    id: entry.id || 'n8n-generated',\n    changes: [{\n      value: {\n        messaging_product: 'whatsapp',\n        metadata: {\n          display_phone_number: entry.changes?.[0]?.value?.metadata?.display_phone_number || '',\n          phone_number_id: entry.changes?.[0]?.value?.metadata?.phone_number_id || ''\n        },\n        contacts: contactData ? [contactData] : [],\n        messages: [{\n          id: messageId,\n          from: fromNumber,\n          timestamp: timestamp,\n          type: messageType,\n          text: {\n            body: messageText\n          }\n        }]\n      }\n    }]\n  }]\n};\n\n// Return processed data\nreturn [{\n  json: {\n    originalWebhook: webhookData,\n    processedMessage: {\n      messageText: messageText,\n      cleanMessage: cleanMessage,\n      fromNumber: fromNumber,\n      customerName: customerName,\n      messageId: messageId,\n      timestamp: timestamp,\n      intent: intent,\n      cuisines: cuisines,\n      restaurantRequest: restaurantRequest\n    }\n  }\n}];"
+      },
+      "id": "3c4d5e6f-7g8h-9i0j-1k2l-m3n4o5p6q7r8",
+      "name": "Process WhatsApp Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://YOUR-NGROK-URL.ngrok.io/webhook/whatsapp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-restaurant-bot/1.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": []
+        },
+        "bodyParametersJson": "={{ $json.processedMessage.restaurantRequest }}",
+        "options": {
+          "timeout": 10000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 3
+          }
+        }
+      },
+      "id": "4d5e6f7g-8h9i-0j1k-2l3m-n4o5p6q7r8s9",
+      "name": "Call Restaurant Agent API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "api-success",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5e6f7g8h-9i0j-1k2l-3m4n-o5p6q7r8s9t0",
+      "name": "Check Restaurant API Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process successful restaurant agent response\nconst apiResponse = $input.first().json;\nconst originalData = $('Process WhatsApp Message').first().json;\n\n// Extract response data\nconst responseBody = typeof apiResponse.body === 'string' ? \n  JSON.parse(apiResponse.body) : apiResponse.body;\n\n// Get customer info\nconst fromNumber = originalData.processedMessage.fromNumber;\nconst customerName = originalData.processedMessage.customerName;\nconst messageId = originalData.processedMessage.messageId;\n\n// Format WhatsApp response message\nlet whatsappMessage = '';\n\nif (responseBody.restaurants && responseBody.restaurants.length > 0) {\n  whatsappMessage = `🍽️ Hi ${customerName}! I found ${responseBody.restaurants.length} restaurant${responseBody.restaurants.length > 1 ? 's' : ''} for you:\\n\\n`;\n  \n  responseBody.restaurants.forEach((restaurant, index) => {\n    const stars = '⭐'.repeat(Math.floor(restaurant.rating || 4));\n    const priceLevel = '💰'.repeat(restaurant.priceLevel || 2);\n    \n    whatsappMessage += `${index + 1}. **${restaurant.name}**\\n`;\n    whatsappMessage += `   📍 ${restaurant.address}\\n`;\n    whatsappMessage += `   🍴 ${restaurant.cuisine?.join(', ') || 'Various'} • ${priceLevel}\\n`;\n    whatsappMessage += `   ${stars} ${restaurant.rating || 'N/A'}/5\\n`;\n    \n    if (restaurant.openingHours?.weekdayText) {\n      const today = new Date().getDay();\n      const todayHours = restaurant.openingHours.weekdayText[today === 0 ? 6 : today - 1];\n      whatsappMessage += `   🕐 ${todayHours}\\n`;\n    }\n    \n    whatsappMessage += '\\n';\n  });\n  \n  whatsappMessage += 'To book a table, just say: \"Book at [Restaurant Name] for [number] people on [date] at [time]\"\\n\\n';\n  whatsappMessage += 'Need more info? Ask me about specific restaurants! 🤖';\n} else {\n  whatsappMessage = `Hi ${customerName}! 😊\\n\\nI couldn't find any restaurants matching your request right now. \\n\\nTry asking for:\\n• \"Italian restaurants\"\\n• \"Chinese food\"\\n• \"Japanese sushi\"\\n• \"Show me all restaurants\"\\n\\nI'm here to help! 🍽️`;\n}\n\n// Create WhatsApp API payload\nconst whatsappPayload = {\n  messaging_product: 'whatsapp',\n  to: fromNumber,\n  type: 'text',\n  text: {\n    body: whatsappMessage\n  }\n};\n\nreturn [{\n  json: {\n    success: true,\n    fromNumber: fromNumber,\n    customerName: customerName,\n    messageId: messageId,\n    responseMessage: whatsappMessage,\n    whatsappPayload: whatsappPayload,\n    restaurantData: responseBody\n  }\n}];"
+      },
+      "id": "6f7g8h9i-0j1k-2l3m-4n5o-p6q7r8s9t0u1",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle API error response\nconst apiResponse = $input.first().json;\nconst originalData = $('Process WhatsApp Message').first().json;\n\nconst fromNumber = originalData.processedMessage.fromNumber;\nconst customerName = originalData.processedMessage.customerName;\n\n// Create error response\nconst errorMessage = `Hi ${customerName}! 😔\\n\\nI'm experiencing some technical difficulties right now. Please try again in a few moments.\\n\\nIf the problem persists, you can:\\n• Try a simpler request like \"Italian restaurants\"\\n• Contact our support team\\n\\nSorry for the inconvenience! 🛠️`;\n\n// Create WhatsApp API payload\nconst whatsappPayload = {\n  messaging_product: 'whatsapp',\n  to: fromNumber,\n  type: 'text',\n  text: {\n    body: errorMessage\n  }\n};\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    fromNumber: fromNumber,\n    customerName: customerName,\n    responseMessage: errorMessage,\n    whatsappPayload: whatsappPayload,\n    apiError: apiResponse\n  }\n}];"
+      },
+      "id": "7g8h9i0j-1k2l-3m4n-5o6p-q7r8s9t0u1v2",
+      "name": "Format Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 280]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v18.0/{{ $('Process WhatsApp Message').first().json.originalWebhook.entry[0].changes[0].value.metadata.phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_ACCESS_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={{ $json.whatsappPayload }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "8h9i0j1k-2l3m-4n5o-6p7q-r8s9t0u1v2w3",
+      "name": "Send WhatsApp Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"success\", \"message\": \"Message processed\", \"timestamp\": \"{{ new Date().toISOString() }}\", \"messageId\": \"{{ $json.messageId }}\" }",
+        "options": {}
+      },
+      "id": "9i0j1k2l-3m4n-5o6p-7q8r-s9t0u1v2w3x4",
+      "name": "Webhook Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1740, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ignored\", \"message\": \"Invalid or unsupported message type\", \"timestamp\": \"{{ new Date().toISOString() }}\" }",
+        "options": {}
+      },
+      "id": "0j1k2l3m-4n5o-6p7q-8r9s-t0u1v2w3x4y5",
+      "name": "Invalid Message Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 400]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Valid WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Process WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Message Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Call Restaurant Agent API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Restaurant Agent API": {
+      "main": [
+        [
+          {
+            "node": "Check Restaurant API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Restaurant API Response": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Response": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Response": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "active": false
+    }
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "restaurant",
+      "name": "Restaurant"
+    },
+    {
+      "id": "whatsapp", 
+      "name": "WhatsApp"
+    },
+    {
+      "id": "chatbot",
+      "name": "Chatbot"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-09T15:30:00.000Z",
+  "versionId": "2"
+}

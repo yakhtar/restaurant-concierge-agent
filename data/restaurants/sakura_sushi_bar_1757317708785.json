@@ -1,0 +1,185 @@
+{
+  "restaurant": {
+    "id": "generated_1757317708769_26b7uy8tt",
+    "name": "Sakura Sushi Bar",
+    "address": "456 Michigan Ave, Chicago, IL",
+    "location": {
+      "lat": 35.765376,
+      "lng": -49.717143
+    },
+    "rating": 4.1,
+    "priceLevel": 2,
+    "cuisine": [
+      "japanese"
+    ],
+    "photos": [],
+    "openingHours": {
+      "periods": [
+        {
+          "open": {
+            "day": 1,
+            "time": "1600"
+          },
+          "close": {
+            "day": 1,
+            "time": "0200"
+          }
+        },
+        {
+          "open": {
+            "day": 2,
+            "time": "1600"
+          },
+          "close": {
+            "day": 2,
+            "time": "0200"
+          }
+        },
+        {
+          "open": {
+            "day": 3,
+            "time": "1600"
+          },
+          "close": {
+            "day": 3,
+            "time": "0200"
+          }
+        },
+        {
+          "open": {
+            "day": 4,
+            "time": "1600"
+          },
+          "close": {
+            "day": 4,
+            "time": "0200"
+          }
+        },
+        {
+          "open": {
+            "day": 5,
+            "time": "1600"
+          },
+          "close": {
+            "day": 5,
+            "time": "0300"
+          }
+        },
+        {
+          "open": {
+            "day": 6,
+            "time": "1600"
+          },
+          "close": {
+            "day": 6,
+            "time": "0300"
+          }
+        },
+        {
+          "open": {
+            "day": 0,
+            "time": "1600"
+          },
+          "close": {
+            "day": 0,
+            "time": "0200"
+          }
+        }
+      ],
+      "weekdayText": [
+        "Monday: 4:00 PM – 2:00 AM",
+        "Tuesday: 4:00 PM – 2:00 AM",
+        "Wednesday: 4:00 PM – 2:00 AM",
+        "Thursday: 4:00 PM – 2:00 AM",
+        "Friday: 4:00 PM – 3:00 AM",
+        "Saturday: 4:00 PM – 3:00 AM",
+        "Sunday: 4:00 PM – 2:00 AM"
+      ]
+    },
+    "reviews": [
+      {
+        "author": "Sarah M.",
+        "rating": 3.559201220778284,
+        "text": "Great experience at Sakura Sushi Bar! The japanese food was delicious and the service was friendly. Will definitely be back.",
+        "time": 1756961690880.461
+      },
+      {
+        "author": "Mike R.",
+        "rating": 3.1122862508981424,
+        "text": "Good japanese restaurant. Food was tasty though service was a bit slow. Nice atmosphere overall.",
+        "time": 1752259276311.219
+      }
+    ],
+    "dietaryOptions": [
+      {
+        "type": "vegetarian",
+        "available": true,
+        "notes": "Multiple vegetarian options available"
+      },
+      {
+        "type": "vegan",
+        "available": false
+      },
+      {
+        "type": "gluten-free",
+        "available": true,
+        "notes": "Rice-based dishes available"
+      },
+      {
+        "type": "dairy-free",
+        "available": true,
+        "notes": "Many dishes naturally dairy-free"
+      },
+      {
+        "type": "nut-free",
+        "available": true,
+        "notes": "Can accommodate nut allergies with notice"
+      },
+      {
+        "type": "shellfish-free",
+        "available": true,
+        "notes": "No shellfish in most dishes"
+      },
+      {
+        "type": "halal",
+        "available": false
+      },
+      {
+        "type": "kosher",
+        "available": false
+      },
+      {
+        "type": "keto",
+        "available": false
+      },
+      {
+        "type": "paleo",
+        "available": false
+      },
+      {
+        "type": "low-carb",
+        "available": false
+      },
+      {
+        "type": "diabetic-friendly",
+        "available": true,
+        "notes": "Several lighter options available"
+      }
+    ]
+  },
+  "generatedFields": [
+    "rating",
+    "priceLevel",
+    "cuisine",
+    "openingHours",
+    "reviews",
+    "dietaryOptions",
+    "menuCategories",
+    "ambiance",
+    "specialFeatures",
+    "popularDishes",
+    "reservationPolicy",
+    "parkingInfo"
+  ],
+  "confidence": 85
+}

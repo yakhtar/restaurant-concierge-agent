@@ -1,0 +1,73 @@
+{
+  "name": "Restaurant Bot Local Test",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-restaurant-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "test-webhook",
+      "name": "Test Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate WhatsApp message for testing\nconst testMessage = $input.first().json.message || \"Find me Italian restaurants\";\nconst testPhone = $input.first().json.phone || \"+1234567890\";\n\n// Create restaurant data directly (no external API needed)\nconst restaurants = [\n  {\n    name: \"Mario's Italian Bistro\",\n    cuisine: [\"italian\"],\n    rating: 3.6,\n    priceLevel: 2,\n    address: \"123 Main Street, New York, NY\",\n    hours: \"Monday: 11:00 AM – 10:00 PM\"\n  },\n  {\n    name: \"Bella Vista Italian\",\n    cuisine: [\"italian\"],\n    rating: 4.0,\n    priceLevel: 2,\n    address: \"789 Oak Street, Chicago, IL\",\n    hours: \"Monday: 11:00 AM – 10:00 PM\"\n  },\n  {\n    name: \"Dragon Palace Chinese Restaurant\",\n    cuisine: [\"chinese\"],\n    rating: 4.3,\n    priceLevel: 2,\n    address: \"456 Broadway Avenue, New York, NY\",\n    hours: \"Monday: 11:00 AM – 10:00 PM\"\n  },\n  {\n    name: \"Sakura Sushi Bar\",\n    cuisine: [\"japanese\"],\n    rating: 4.1,\n    priceLevel: 2,\n    address: \"456 Michigan Ave, Chicago, IL\",\n    hours: \"Monday: 4:00 PM – 2:00 AM\"\n  }\n];\n\n// Filter restaurants based on message\nlet filteredRestaurants = restaurants;\nconst message = testMessage.toLowerCase();\n\nif (message.includes('italian')) {\n  filteredRestaurants = restaurants.filter(r => r.cuisine.includes('italian'));\n} else if (message.includes('chinese')) {\n  filteredRestaurants = restaurants.filter(r => r.cuisine.includes('chinese'));\n} else if (message.includes('japanese') || message.includes('sushi')) {\n  filteredRestaurants = restaurants.filter(r => r.cuisine.includes('japanese'));\n}\n\n// Format response like your restaurant agent would\nlet response = `🍽️ I found ${filteredRestaurants.length} restaurant${filteredRestaurants.length > 1 ? 's' : ''} for you:\\n\\n`;\n\nfilteredRestaurants.forEach((restaurant, index) => {\n  const stars = '⭐'.repeat(Math.floor(restaurant.rating));\n  const priceLevel = '💰'.repeat(restaurant.priceLevel);\n  \n  response += `${index + 1}. **${restaurant.name}**\\n`;\n  response += `   📍 ${restaurant.address}\\n`;\n  response += `   🍴 ${restaurant.cuisine.join(', ')} • ${priceLevel}\\n`;\n  response += `   ${stars} ${restaurant.rating}/5\\n`;\n  response += `   🕐 ${restaurant.hours}\\n\\n`;\n});\n\nresponse += 'To book a table, say: \"Book at [Restaurant Name] for [number] people on [date]\"\\n\\n';\nresponse += 'Need more info? Ask me about specific restaurants! 🤖';\n\nreturn [{\n  json: {\n    success: true,\n    testMessage: testMessage,\n    testPhone: testPhone,\n    restaurantsFound: filteredRestaurants.length,\n    response: response,\n    restaurants: filteredRestaurants\n  }\n}];"
+      },
+      "id": "process-test",
+      "name": "Process Test Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "test-response",
+      "name": "Test Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 300]
+    }
+  ],
+  "connections": {
+    "Test Webhook": {
+      "main": [
+        [
+          {
+            "node": "Process Test Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Test Message": {
+      "main": [
+        [
+          {
+            "node": "Test Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-09T15:45:00.000Z",
+  "versionId": "1"
+}
