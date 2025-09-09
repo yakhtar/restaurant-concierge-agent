@@ -1,0 +1,433 @@
+{
+  "name": "Enhanced Restaurant Discovery WhatsApp Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-enhanced-restaurant",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "WhatsApp Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "enhanced-restaurant-trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "message-text-exists",
+              "leftValue": "={{ $json.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            },
+            {
+              "id": "is-text-message",
+              "leftValue": "={{ $json.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "validate-message",
+      "name": "Validate WhatsApp Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced WhatsApp message processing with smart intent detection\nconst webhookData = $input.first().json;\nconst entry = webhookData.entry?.[0];\nconst messageData = entry?.changes?.[0]?.value?.messages?.[0];\nconst contactData = entry?.changes?.[0]?.value?.contacts?.[0];\n\nif (!messageData) {\n  return [{ json: { error: 'No message data found' } }];\n}\n\n// Extract message details\nconst messageText = messageData.text?.body || '';\nconst fromNumber = messageData.from;\nconst messageId = messageData.id;\nconst timestamp = messageData.timestamp;\nconst messageType = messageData.type;\n\n// Extract contact info\nconst customerName = contactData?.profile?.name || 'Customer';\n\n// Enhanced message analysis\nconst cleanMessage = messageText.toLowerCase().trim();\n\n// Advanced intent detection\nlet intent = 'general';\nlet confidence = 0.5;\nlet entities = {\n  cuisines: [],\n  dietary: [],\n  priceLevel: null,\n  amenities: [],\n  location: null\n};\n\n// Intent classification with confidence scoring\nif (cleanMessage.includes('find') || cleanMessage.includes('search') || cleanMessage.includes('show') || cleanMessage.includes('looking for')) {\n  intent = 'search';\n  confidence = 0.9;\n} else if (cleanMessage.includes('book') || cleanMessage.includes('reserve') || cleanMessage.includes('table')) {\n  intent = 'booking';\n  confidence = 0.9;\n} else if (cleanMessage.includes('help') || cleanMessage.includes('menu') || cleanMessage.includes('what can you')) {\n  intent = 'help';\n  confidence = 0.9;\n} else if (cleanMessage.includes('list') || cleanMessage.includes('all restaurants')) {\n  intent = 'list_all';\n  confidence = 0.8;\n}\n\n// Entity extraction\n// Cuisines\nconst cuisinePatterns = {\n  'italian': ['italian', 'pizza', 'pasta', 'mario', 'luigi', 'bella'],\n  'chinese': ['chinese', 'dragon', 'wok', 'beijing', 'szechuan'],\n  'japanese': ['japanese', 'sushi', 'ramen', 'tokyo', 'hibachi'],\n  'mexican': ['mexican', 'taco', 'burrito', 'salsa', 'cantina'],\n  'indian': ['indian', 'curry', 'masala', 'tandoor', 'spice'],\n  'thai': ['thai', 'pad', 'som', 'tom', 'bangkok'],\n  'american': ['american', 'burger', 'grill', 'diner', 'bbq'],\n  'french': ['french', 'bistro', 'cafe', 'brasserie']\n};\n\nfor (const [cuisine, patterns] of Object.entries(cuisinePatterns)) {\n  if (patterns.some(pattern => cleanMessage.includes(pattern))) {\n    entities.cuisines.push(cuisine);\n  }\n}\n\n// Dietary restrictions\nconst dietaryPatterns = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'kosher', 'dairy-free', 'nut-free', 'keto', 'paleo'];\nfor (const dietary of dietaryPatterns) {\n  if (cleanMessage.includes(dietary) || cleanMessage.includes(dietary.replace('-', ' '))) {\n    entities.dietary.push(dietary);\n  }\n}\n\n// Price level detection\nif (cleanMessage.includes('cheap') || cleanMessage.includes('budget') || cleanMessage.includes('affordable')) {\n  entities.priceLevel = 1;\n} else if (cleanMessage.includes('expensive') || cleanMessage.includes('upscale') || cleanMessage.includes('fine dining')) {\n  entities.priceLevel = 4;\n} else if (cleanMessage.includes('mid-range') || cleanMessage.includes('moderate')) {\n  entities.priceLevel = 2;\n}\n\n// Amenities detection\nif (cleanMessage.includes('outdoor') || cleanMessage.includes('patio')) {\n  entities.amenities.push('outdoor_seating');\n}\nif (cleanMessage.includes('delivery')) {\n  entities.amenities.push('delivery');\n}\nif (cleanMessage.includes('takeout')) {\n  entities.amenities.push('takeout');\n}\nif (cleanMessage.includes('parking')) {\n  entities.amenities.push('parking');\n}\n\n// Location detection\nif (cleanMessage.includes('near me') || cleanMessage.includes('nearby') || cleanMessage.includes('close')) {\n  entities.location = 'nearby';\n}\n\n// Smart query enhancement based on entities\nlet enhancedQuery = messageText;\nif (entities.cuisines.length > 0 || entities.dietary.length > 0 || entities.priceLevel || entities.amenities.length > 0) {\n  const queryParts = [];\n  \n  if (entities.cuisines.length > 0) {\n    queryParts.push(entities.cuisines[0] + ' restaurants');\n  }\n  \n  if (entities.dietary.length > 0) {\n    queryParts.push('with ' + entities.dietary.join(' and ') + ' options');\n  }\n  \n  if (entities.priceLevel) {\n    const priceLevels = {1: 'cheap', 2: 'moderate', 3: 'upscale', 4: 'expensive'};\n    queryParts.push(priceLevels[entities.priceLevel]);\n  }\n  \n  if (entities.amenities.length > 0) {\n    queryParts.push('with ' + entities.amenities.join(' and '));\n  }\n  \n  if (queryParts.length > 0) {\n    enhancedQuery = queryParts.join(' ');\n  }\n}\n\n// Return processed data with enhanced structure\nreturn [{\n  json: {\n    originalWebhook: webhookData,\n    processedMessage: {\n      messageText: messageText,\n      enhancedQuery: enhancedQuery,\n      cleanMessage: cleanMessage,\n      fromNumber: fromNumber,\n      customerName: customerName,\n      messageId: messageId,\n      timestamp: timestamp,\n      intent: intent,\n      confidence: confidence,\n      entities: entities,\n      // Prepare request for enhanced API\n      apiRequest: {\n        message: enhancedQuery,\n        phone: fromNumber,\n        intent: intent,\n        filters: {\n          cuisines: entities.cuisines,\n          dietary: entities.dietary,\n          priceLevel: entities.priceLevel,\n          amenities: entities.amenities,\n          location: entities.location\n        },\n        context: {\n          customerName: customerName,\n          messageId: messageId,\n          timestamp: timestamp,\n          confidence: confidence\n        }\n      }\n    }\n  }\n}];"
+      },
+      "id": "process-message",
+      "name": "Enhanced Message Processing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "high-confidence",
+              "leftValue": "={{ $json.processedMessage.confidence }}",
+              "rightValue": 0.7,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "confidence-check",
+      "name": "Check Intent Confidence",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://restaurant-concierge-agent.onrender.com/api/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-enhanced-restaurant-bot/2.0"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.processedMessage.enhancedQuery }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.processedMessage.fromNumber }}"
+            },
+            {
+              "name": "intent",
+              "value": "={{ $json.processedMessage.intent }}"
+            },
+            {
+              "name": "filters",
+              "value": "={{ $json.processedMessage.apiRequest.filters }}"
+            },
+            {
+              "name": "context",
+              "value": "={{ $json.processedMessage.apiRequest.context }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 2
+          }
+        }
+      },
+      "id": "restaurant-api",
+      "name": "Enhanced Restaurant API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle low confidence or unclear messages with helpful suggestions\nconst processedData = $input.first().json.processedMessage;\nconst customerName = processedData.customerName;\nconst originalMessage = processedData.messageText;\nconst entities = processedData.entities;\n\nlet helpfulResponse = `Hi ${customerName}! 👋\\n\\n`;\n\nif (originalMessage.length < 3) {\n  helpfulResponse += `I didn't quite catch that. Here are some things I can help you with:\\n\\n`;\n} else {\n  helpfulResponse += `I understand you're looking for something, but I need a bit more information. `;\n  \n  if (entities.cuisines.length > 0) {\n    helpfulResponse += `I noticed you mentioned ${entities.cuisines[0]} food. `;\n  }\n  \n  helpfulResponse += `\\n\\nHere are some ways you can search:\\n\\n`;\n}\n\nhelpfulResponse += `🍽️ **By Cuisine:**\\n`;\nhelpfulResponse += `• \"Find Italian restaurants\"\\n`;\nhelpfulResponse += `• \"Show me Chinese food\"\\n`;\nhelpfulResponse += `• \"Japanese sushi places\"\\n\\n`;\n\nhelpfulResponse += `🌱 **By Dietary Needs:**\\n`;\nhelpfulResponse += `• \"Vegetarian restaurants\"\\n`;\nhelpfulResponse += `• \"Vegan friendly places\"\\n`;\nhelpfulResponse += `• \"Gluten-free options\"\\n\\n`;\n\nhelpfulResponse += `💰 **By Price Range:**\\n`;\nhelpfulResponse += `• \"Cheap restaurants\"\\n`;\nhelpfulResponse += `• \"Budget friendly dining\"\\n`;\nhelpfulResponse += `• \"Upscale restaurants\"\\n\\n`;\n\nhelpfulResponse += `✨ **By Features:**\\n`;\nhelpfulResponse += `• \"Restaurants with outdoor seating\"\\n`;\nhelpfulResponse += `• \"Places with delivery\"\\n`;\nhelpfulResponse += `• \"Good for groups\"\\n\\n`;\n\nhelpfulResponse += `📍 **Other Options:**\\n`;\nhelpfulResponse += `• \"List all restaurants\"\\n`;\nhelpfulResponse += `• \"Book a table at [restaurant name]\"\\n`;\nhelpfulResponse += `• \"Tell me about [restaurant name]\"\\n\\n`;\n\nhelpfulResponse += `Just type your request and I'll find the perfect restaurant for you! 🤖`;\n\n// Create WhatsApp response\nconst whatsappPayload = {\n  messaging_product: 'whatsapp',\n  to: processedData.fromNumber,\n  type: 'text',\n  text: {\n    body: helpfulResponse\n  }\n};\n\nreturn [{\n  json: {\n    success: true,\n    type: 'help_response',\n    fromNumber: processedData.fromNumber,\n    customerName: customerName,\n    responseMessage: helpfulResponse,\n    whatsappPayload: whatsappPayload,\n    originalMessage: originalMessage,\n    detectedEntities: entities\n  }\n}];"
+      },
+      "id": "clarification-response",
+      "name": "Smart Clarification Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "api-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-api-response",
+      "name": "Check API Response",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1300, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced success response formatting with rich information\nconst apiResponse = $input.first().json;\nconst originalData = $('Enhanced Message Processing').first().json.processedMessage;\n\nconst fromNumber = originalData.fromNumber;\nconst customerName = originalData.customerName;\nconst messageId = originalData.messageId;\nconst intent = originalData.intent;\nconst entities = originalData.entities;\n\n// Parse API response\nlet responseMessage = '';\n\nif (apiResponse.message) {\n  responseMessage = apiResponse.message;\n} else {\n  // Fallback response formatting\n  responseMessage = `Hi ${customerName}! 🍽️\\n\\n`;\n  \n  if (intent === 'search') {\n    responseMessage += `Here's what I found based on your search`;\n    \n    if (entities.cuisines.length > 0) {\n      responseMessage += ` for ${entities.cuisines.join(' and ')} cuisine`;\n    }\n    \n    if (entities.dietary.length > 0) {\n      responseMessage += ` with ${entities.dietary.join(' and ')} options`;\n    }\n    \n    responseMessage += `:\\n\\n`;\n    \n    // Add restaurants if available in response\n    if (apiResponse.restaurants) {\n      apiResponse.restaurants.slice(0, 5).forEach((restaurant, index) => {\n        responseMessage += `${index + 1}. **${restaurant.name}**\\n`;\n        responseMessage += `   📍 ${restaurant.address}\\n`;\n        responseMessage += `   🍴 ${restaurant.cuisine?.join(', ') || 'Various'} • ${'💰'.repeat(restaurant.priceLevel || 2)}\\n`;\n        responseMessage += `   ⭐ ${restaurant.rating || 'N/A'}/5\\n\\n`;\n      });\n      \n      responseMessage += `💡 Want to book? Say: \"Book at [Restaurant Name] for [number] people\"\\n`;\n      responseMessage += `Need more info? Ask: \"Tell me about [Restaurant Name]\"`;\n    }\n  } else {\n    responseMessage += `I've processed your request. How can I help you further?`;\n  }\n}\n\n// Enhanced WhatsApp payload with quick reply options for supported features\nconst whatsappPayload = {\n  messaging_product: 'whatsapp',\n  to: fromNumber,\n  type: 'text',\n  text: {\n    body: responseMessage\n  }\n};\n\n// Add interactive elements if WhatsApp Business API supports it\nif (intent === 'search' && apiResponse.restaurants?.length > 0) {\n  // Future enhancement: Add quick action buttons\n  // whatsappPayload.type = 'interactive';\n  // whatsappPayload.interactive = { ... };\n}\n\nreturn [{\n  json: {\n    success: true,\n    type: 'search_response',\n    fromNumber: fromNumber,\n    customerName: customerName,\n    messageId: messageId,\n    responseMessage: responseMessage,\n    whatsappPayload: whatsappPayload,\n    apiResponse: apiResponse,\n    searchContext: {\n      intent: intent,\n      entities: entities,\n      originalQuery: originalData.messageText,\n      enhancedQuery: originalData.enhancedQuery\n    }\n  }\n}];"
+      },
+      "id": "format-success",
+      "name": "Enhanced Success Formatting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced error handling with helpful recovery suggestions\nconst apiResponse = $input.first().json;\nconst originalData = $('Enhanced Message Processing').first().json.processedMessage;\n\nconst fromNumber = originalData.fromNumber;\nconst customerName = originalData.customerName;\nconst entities = originalData.entities;\n\nlet errorMessage = `Hi ${customerName}! 😔\\n\\n`;\n\n// Determine error type and provide specific help\nif (apiResponse.statusCode === 404) {\n  errorMessage += `I couldn't find any restaurants matching your search`;\n  \n  if (entities.cuisines.length > 0) {\n    errorMessage += ` for ${entities.cuisines[0]} cuisine`;\n  }\n  \n  errorMessage += `.\\n\\n`;\n  errorMessage += `Try these alternatives:\\n`;\n  errorMessage += `• Broaden your search: \"restaurants near me\"\\n`;\n  errorMessage += `• Different cuisine: \"Italian restaurants\"\\n`;\n  errorMessage += `• Remove filters: \"affordable restaurants\"\\n`;\n  errorMessage += `• See all options: \"list restaurants\"`;\n} else if (apiResponse.statusCode >= 500) {\n  errorMessage += `I'm experiencing some technical difficulties. Let me try to help you anyway!\\n\\n`;\n  errorMessage += `While I fix things, here are some popular options you might like:\\n\\n`;\n  errorMessage += `🍕 **Italian:** Mario's Italian Bistro - Great pasta and pizza\\n`;\n  errorMessage += `🥡 **Chinese:** Dragon Palace - Authentic Chinese dishes\\n`;\n  errorMessage += `🍣 **Japanese:** Sakura Sushi Bar - Fresh sushi and rolls\\n\\n`;\n  errorMessage += `Please try your search again in a moment, or say \"list restaurants\" to see all options.`;\n} else {\n  errorMessage += `Something went wrong with your request. Here's what you can try:\\n\\n`;\n  errorMessage += `📱 **Simple searches work best:**\\n`;\n  errorMessage += `• \"Find Italian restaurants\"\\n`;\n  errorMessage += `• \"Vegetarian places\"\\n`;\n  errorMessage += `• \"Cheap restaurants\"\\n\\n`;\n  errorMessage += `🔄 **Or try:**\\n`;\n  errorMessage += `• \"List all restaurants\"\\n`;\n  errorMessage += `• \"Help\" - for more options`;\n}\n\nerrorMessage += `\\n\\nI'm here to help! Just send me another message. 🤖`;\n\n// Create WhatsApp response\nconst whatsappPayload = {\n  messaging_product: 'whatsapp',\n  to: fromNumber,\n  type: 'text',\n  text: {\n    body: errorMessage\n  }\n};\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    type: 'error_response',\n    fromNumber: fromNumber,\n    customerName: customerName,\n    responseMessage: errorMessage,\n    whatsappPayload: whatsappPayload,\n    apiError: {\n      statusCode: apiResponse.statusCode,\n      message: apiResponse.message || 'Unknown error',\n      originalQuery: originalData.messageText,\n      detectedEntities: entities\n    }\n  }\n}];"
+      },
+      "id": "format-error",
+      "name": "Enhanced Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 180]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v18.0/{{ $('Enhanced Message Processing').first().json.originalWebhook.entry[0].changes[0].value.metadata.phone_number_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_WHATSAPP_ACCESS_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={{ $json.whatsappPayload }}",
+        "options": {
+          "timeout": 5000,
+          "retry": {
+            "enabled": true,
+            "maxTries": 2
+          }
+        }
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1740, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"success\", \"message\": \"Enhanced message processed successfully\", \"timestamp\": \"{{ new Date().toISOString() }}\", \"messageId\": \"{{ $json.messageId }}\", \"intent\": \"{{ $json.searchContext?.intent || $json.type }}\", \"confidence\": \"{{ $json.searchContext?.confidence || 'N/A' }}\" }",
+        "options": {}
+      },
+      "id": "webhook-success",
+      "name": "Enhanced Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1960, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ignored\", \"message\": \"Invalid or unsupported message format\", \"timestamp\": \"{{ new Date().toISOString() }}\", \"suggestion\": \"Send a text message with your restaurant request\" }",
+        "options": {}
+      },
+      "id": "invalid-message",
+      "name": "Invalid Message Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [640, 400]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate WhatsApp Message": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Message Processing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Message Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Message Processing": {
+      "main": [
+        [
+          {
+            "node": "Check Intent Confidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Intent Confidence": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Restaurant API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Smart Clarification Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Restaurant API": {
+      "main": [
+        [
+          {
+            "node": "Check API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smart Clarification Response": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Response": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Success Formatting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enhanced Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Success Formatting": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enhanced Error Response": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Response": {
+      "main": [
+        [
+          {
+            "node": "Enhanced Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "active": false
+    },
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "id": "enhanced-restaurant",
+      "name": "Enhanced Restaurant"
+    },
+    {
+      "id": "whatsapp-ai",
+      "name": "WhatsApp AI"
+    },
+    {
+      "id": "smart-search",
+      "name": "Smart Search"
+    },
+    {
+      "id": "discovery",
+      "name": "Discovery"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-10T12:00:00.000Z",
+  "versionId": "3.0"
+}

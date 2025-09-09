@@ -246,30 +246,79 @@ export class EnhancedConciergeAgent {
   }
 
   private handleRestaurantSearch(messageText: string): string {
-    // Extract cuisine or restaurant name from message
-    const results = this.searchRestaurants(messageText, {});
+    // Enhanced search with filters
+    const searchFilters = this.extractSearchFilters(messageText);
+    const results = this.searchRestaurants(messageText, searchFilters);
     
     if (results.length === 0) {
-      return `I couldn't find any restaurants matching "${messageText}". Try:\n\n• "Find Italian restaurants"\n• "Search Chinese food"\n• "List restaurants" to see all available options\n\nOr generate more restaurants with the CLI!`;
+      let suggestions = `I couldn't find any restaurants matching "${messageText}".`;
+      
+      if (searchFilters.dietary || searchFilters.priceLevel || searchFilters.amenity) {
+        suggestions += ` Try:\n\n• Broadening your search: "Italian restaurants"\n• Different filters: "cheap Chinese food" or "vegetarian friendly"\n• "List all restaurants" to see all options`;
+      } else {
+        suggestions += ` Try:\n\n• "Find Italian restaurants"\n• "Search Chinese food near me"\n• "Show vegetarian restaurants"\n• "List restaurants" to see all available options`;
+      }
+      
+      suggestions += `\n\nOr generate more restaurants with the CLI!`;
+      return suggestions;
     }
 
-    let response = `🍽️ I found ${results.length} restaurant${results.length > 1 ? 's' : ''} for you:\n\n`;
+    let response = `🍽️ I found ${results.length} restaurant${results.length > 1 ? 's' : ''} for you`;
+    
+    // Add filter context
+    if (searchFilters.cuisine) response += ` serving ${searchFilters.cuisine}`;
+    if (searchFilters.dietary) response += ` with ${searchFilters.dietary} options`;
+    if (searchFilters.priceLevel) response += ` in your price range`;
+    
+    response += `:\n\n`;
     
     results.slice(0, 5).forEach((data, index) => {
       const restaurant = data.restaurant;
       const popular = (data as any).popularDishes?.slice(0, 2).join(', ') || 'Various dishes';
+      const extendedData = data as any;
+      
       response += `${index + 1}. **${restaurant.name}**\n`;
       response += `   📍 ${restaurant.address}\n`;
       response += `   🍴 ${restaurant.cuisine.join(', ')} • ${'💰'.repeat(restaurant.priceLevel)}\n`;
-      response += `   ⭐ ${restaurant.rating}/5\n`;
-      response += `   🔥 Popular: ${popular}\n\n`;
+      response += `   ⭐ ${restaurant.rating}/5`;
+      
+      // Add wait time if available
+      if (extendedData.averageWaitTime) {
+        response += ` • ⏱️ ~${extendedData.averageWaitTime}min wait\n`;
+      } else {
+        response += `\n`;
+      }
+      
+      response += `   🔥 Popular: ${popular}\n`;
+      
+      // Add dietary options if relevant
+      if (searchFilters.dietary && restaurant.dietaryOptions) {
+        const dietaryMatch = restaurant.dietaryOptions.find(opt => 
+          opt.type === searchFilters.dietary && opt.available
+        );
+        if (dietaryMatch?.notes) {
+          response += `   🌱 ${dietaryMatch.notes}\n`;
+        }
+      }
+      
+      // Add special features
+      if (extendedData.specialFeatures?.length > 0) {
+        const features = extendedData.specialFeatures.slice(0, 2).join(', ');
+        response += `   ✨ ${features}\n`;
+      }
+      
+      response += `\n`;
     });
 
     if (results.length > 5) {
       response += `... and ${results.length - 5} more restaurants available!\n\n`;
     }
 
-    response += `To book a table, say: "Book at [Restaurant Name] for [party size] on [date] at [time]"`;
+    response += `💡 **Quick actions:**\n`;
+    response += `• "Book at [Restaurant Name] for [party size] on [date]"\n`;
+    response += `• "Tell me more about [Restaurant Name]"\n`;
+    response += `• "Show me vegetarian options"\n`;
+    response += `• "Find cheaper alternatives"`;
     
     return response;
   }
@@ -298,17 +347,75 @@ export class EnhancedConciergeAgent {
            `📞 You can also call directly: ${restaurant.phone || 'Contact info not available'}`;
   }
 
-  private searchRestaurants(query: string, filters: { cuisine?: string; priceLevel?: number }): GeneratedRestaurantData[] {
+  private extractSearchFilters(messageText: string): { 
+    cuisine?: string; 
+    priceLevel?: number; 
+    dietary?: string; 
+    amenity?: string;
+  } {
+    const queryLower = messageText.toLowerCase();
+    const filters: any = {};
+
+    // Cuisine detection
+    const cuisines = ['italian', 'chinese', 'japanese', 'mexican', 'indian', 'thai', 'french', 'american', 'mediterranean', 'korean'];
+    for (const cuisine of cuisines) {
+      if (queryLower.includes(cuisine)) {
+        filters.cuisine = cuisine;
+        break;
+      }
+    }
+
+    // Price level detection
+    if (queryLower.includes('cheap') || queryLower.includes('budget') || queryLower.includes('affordable')) {
+      filters.priceLevel = 1;
+    } else if (queryLower.includes('expensive') || queryLower.includes('upscale') || queryLower.includes('fine dining')) {
+      filters.priceLevel = 4;
+    } else if (queryLower.includes('mid-range') || queryLower.includes('moderate')) {
+      filters.priceLevel = 2;
+    }
+
+    // Dietary options detection
+    const dietaryOptions = ['vegetarian', 'vegan', 'gluten-free', 'halal', 'kosher', 'dairy-free', 'nut-free'];
+    for (const dietary of dietaryOptions) {
+      if (queryLower.includes(dietary)) {
+        filters.dietary = dietary;
+        break;
+      }
+    }
+
+    // Amenity detection
+    if (queryLower.includes('outdoor') || queryLower.includes('patio')) {
+      filters.amenity = 'outdoor_seating';
+    } else if (queryLower.includes('delivery')) {
+      filters.amenity = 'delivery';
+    } else if (queryLower.includes('takeout')) {
+      filters.amenity = 'takeout';
+    } else if (queryLower.includes('parking')) {
+      filters.amenity = 'parking';
+    }
+
+    return filters;
+  }
+
+  private searchRestaurants(query: string, filters: { 
+    cuisine?: string; 
+    priceLevel?: number; 
+    dietary?: string; 
+    amenity?: string;
+  }): GeneratedRestaurantData[] {
     const queryLower = query.toLowerCase();
     const results: GeneratedRestaurantData[] = [];
 
     for (const [name, data] of this.restaurantCache.entries()) {
       const restaurant = data.restaurant;
+      const extendedData = data as any;
       let matches = false;
+      let score = 0;
 
-      // Name match
+      // Name match (highest priority)
       if (name.includes(queryLower) || queryLower.includes(name)) {
         matches = true;
+        score += 10;
       }
 
       // Cuisine match
@@ -316,31 +423,72 @@ export class EnhancedConciergeAgent {
         queryLower.includes(cuisine) || cuisine.includes(queryLower.split(' ')[0])
       )) {
         matches = true;
+        score += 8;
       }
 
       // Popular dishes match
-      const popularDishes = (data as any).popularDishes || [];
+      const popularDishes = extendedData.popularDishes || [];
       if (popularDishes.some((dish: string) => queryLower.includes(dish.toLowerCase()))) {
         matches = true;
+        score += 6;
+      }
+
+      // Special features match
+      const specialFeatures = extendedData.specialFeatures || [];
+      if (specialFeatures.some((feature: string) => queryLower.includes(feature.toLowerCase()))) {
+        matches = true;
+        score += 4;
       }
 
       // Apply filters
       if (matches) {
+        // Cuisine filter
         if (filters.cuisine && !restaurant.cuisine.includes(filters.cuisine.toLowerCase())) {
           matches = false;
         }
+        
+        // Price level filter
         if (filters.priceLevel && restaurant.priceLevel !== filters.priceLevel) {
           matches = false;
+        }
+        
+        // Dietary filter
+        if (filters.dietary && restaurant.dietaryOptions) {
+          const hasDietary = restaurant.dietaryOptions.some(opt => 
+            opt.type === filters.dietary && opt.available
+          );
+          if (!hasDietary) {
+            matches = false;
+          } else {
+            score += 5; // Bonus for matching dietary requirements
+          }
+        }
+        
+        // Amenity filter
+        if (filters.amenity && extendedData.specialFeatures) {
+          const hasAmenity = extendedData.specialFeatures.some((feature: string) => 
+            feature.toLowerCase().includes(filters.amenity?.replace('_', ' ') || '')
+          );
+          if (!hasAmenity) {
+            matches = false;
+          } else {
+            score += 3; // Bonus for matching amenity
+          }
         }
       }
 
       if (matches) {
-        results.push(data);
+        results.push({...data, searchScore: score});
       }
     }
 
-    // Sort by rating (descending)
-    return results.sort((a, b) => b.restaurant.rating - a.restaurant.rating);
+    // Sort by search score first, then by rating
+    return results.sort((a: any, b: any) => {
+      if (a.searchScore !== b.searchScore) {
+        return b.searchScore - a.searchScore;
+      }
+      return b.restaurant.rating - a.restaurant.rating;
+    });
   }
 
   private listAvailableRestaurants(): string {
