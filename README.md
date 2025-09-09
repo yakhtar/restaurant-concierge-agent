@@ -1,6 +1,6 @@
-# Restaurant Concierge Agent
+# 🍽️ Enhanced Restaurant Concierge Agent
 
-A comprehensive AI-powered restaurant concierge system that integrates with WhatsApp Business Cloud via n8n workflows, providing intelligent restaurant discovery, reservation management, and personalized dining recommendations.
+An AI-powered restaurant concierge system with **advanced search & discovery capabilities**, WhatsApp integration via n8n, and intelligent filtering. Features smart intent detection, entity extraction, and multi-criteria restaurant matching.
 
 ## 🚀 Quick Start
 
@@ -44,18 +44,37 @@ cp .env.example .env
 # Add WhatsApp, OpenAI, or other API keys for enhanced features
 ```
 
-## 📋 Project Status
+## ✨ Enhanced Features
+
+### 🧠 **Advanced Search & Discovery** ⭐ NEW!
+- **Smart Intent Detection**: Understands "Find cheap vegetarian Italian restaurants"
+- **Entity Extraction**: Automatically detects cuisines, dietary needs, price preferences
+- **Multi-Filter Search**: Combines cuisine, price, dietary, and amenity filters
+- **Search Scoring**: Ranks results by relevance, rating, and user preferences
+- **Confidence-based Routing**: High-confidence queries get direct results, unclear ones get help
+
+### 🔍 **Enhanced Search Capabilities**
+- **Cuisine Filters**: Italian, Chinese, Japanese, Mexican, Indian, Thai, French, American
+- **Dietary Options**: Vegetarian, vegan, gluten-free, halal, kosher, dairy-free, nut-free
+- **Price Ranges**: Budget-friendly, moderate, upscale, fine dining
+- **Amenities**: Outdoor seating, delivery, takeout, parking, accessibility
+
+### 📱 **Intelligent WhatsApp Integration**
+- **Enhanced n8n Workflow**: Smart message processing with error handling
+- **Rich Responses**: Wait times, dietary info, special features, quick actions
+- **Clarification Flow**: Helps users refine unclear requests
+- **Context Awareness**: Maintains conversation state
+
+## 📋 Current Status
 
 ### ✅ Completed Components
 
-1. **🤖 AI Restaurant Data Generator** ⭐ NEW!
+1. **🤖 AI Restaurant Data Generator** 
    - Generate comprehensive restaurant data from just name + address
    - Intelligent cuisine detection and menu creation
    - Realistic pricing based on location analysis
    - Complete dietary restriction analysis
    - No API costs - uses Claude's intelligence locally
-   - Interactive customization and editing
-   - See: `RESTAURANT_GENERATOR.md` for full details
 
 2. **Project Structure & Configuration**
    - Complete TypeScript setup with ESLint
